@@ -430,6 +430,12 @@ fn posix_character_classes() {
         .stdout_only("42\nx9y\n");
 
     let (_s, mut c) = ucmd();
+    c.args(&["[[:alpha:]]"])
+        .pipe_in("é\n")
+        .succeeds()
+        .stdout_only("é\n");
+
+    let (_s, mut c) = ucmd();
     c.args(&["-E", "[[:notdef:]]"]).fails_with_code(2);
 }
 
@@ -448,6 +454,20 @@ fn longest_match_semantics() {
         .pipe_in("foobarbaz\n")
         .succeeds()
         .stdout_only("foobarbaz\n");
+
+    // Greedy quantifiers participate in POSIX leftmost-longest matching.
+    let (_s, mut c) = ucmd();
+    c.args(&["-E", "-o", "aaaaa|a*"])
+        .pipe_in("aaaaaa\n")
+        .succeeds()
+        .stdout_only("aaaaaa\n");
+
+    // PCRE remains leftmost-first.
+    let (_s, mut c) = ucmd();
+    c.args(&["-P", "-o", "foo|foobar"])
+        .pipe_in("foobar\n")
+        .succeeds()
+        .stdout_only("foo\n");
 
     // Regression: `REGEX_OPTION_FIND_LONGEST` must be re-anchored at each
     // match start. A naive line-anchored search would swallow `"x" "y"`
